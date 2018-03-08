@@ -22,7 +22,6 @@ import org.springframework.security.authentication.AuthenticationDetailsSource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.boot.biz.authentication.ajax.AjaxAwareAuthenticationFailureHandler;
 import org.springframework.security.boot.biz.authentication.ajax.AjaxAwareAuthenticationSuccessHandler;
-import org.springframework.security.boot.biz.authentication.ajax.AjaxAwareLoginProcessingFilter;
 import org.springframework.security.boot.utils.StringUtils;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.core.authority.mapping.NullAuthoritiesMapper;
@@ -119,18 +118,6 @@ public class SecurityOpenIDWebFilterConfiguration implements ApplicationContextA
 		return new NullRememberMeServices();
 	}
  
-    @Bean
-	@ConditionalOnMissingBean
-	public AjaxAwareLoginProcessingFilter jwtAjaxLoginProcessingFilter(AuthenticationFailureHandler failureHandler,
-			AuthenticationManager authenticationManager, ApplicationEventPublisher publisher,
-			AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource,
-			AuthenticationSuccessHandler successHandler, RememberMeServices rememberMeServices,
-			SessionAuthenticationStrategy sessionStrategy) throws Exception {
-        //AjaxUsernamePasswordAuthenticationFilter filter = new AjaxUsernamePasswordAuthenticationFilter(FORM_BASED_LOGIN_ENTRY_POINT, successHandler, failureHandler, objectMapper);
-        //filter.setAuthenticationManager(authenticationManager);
-        return null;
-    }
-    
     @Bean
 	@ConditionalOnMissingBean
 	public OpenIDConsumer openIDConsumer() throws ConsumerException {
