@@ -106,6 +106,9 @@ public class SecurityOpenIDWebFilterConfiguration implements ApplicationContextA
 		}
 	}
 
+	/**
+	   * 自定义登陆验证接口
+	    public OpenIdAuthenticationFilter openIdAuthenticationFilter() throws Exception { OpenIdAuthenticationFilter openIdAuthenticationFilter = new OpenIdAuthenticationFilter(); openIdAuthenticationFilter.setAuthenticationManager(authenticationManager()); //只有post请求才拦截 openIdAuthenticationFilter.setRequiresAuthenticationRequestMatcher(new AntPathRequestMatcher("/login", "POST")); openIdAuthenticationFilter.setAuthenticationSuccessHandler(securityAuthenticationSuccessHandler); openIdAuthenticationFilter.setAuthenticationFailureHandler(securityAuthenticationFailureHandler); return openIdAuthenticationFilter; }*/
 	@Bean
 	@ConditionalOnMissingBean
 	public SessionAuthenticationStrategy sessionStrategy() {
