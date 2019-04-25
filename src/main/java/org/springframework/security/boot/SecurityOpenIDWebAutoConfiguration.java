@@ -49,6 +49,15 @@ public class SecurityOpenIDWebAutoConfiguration extends WebSecurityConfigurerAda
     @Override
     protected void configure(HttpSecurity http) throws Exception {
     	
+    	
+    	
+    	http.openidLogin()
+//    	.attributeExchange(identifierPattern)
+  //  	.authenticationDetailsSource(authenticationDetailsSource)
+    	//.authenticationUserDetailsService(authenticationUserDetailsService)
+    	.consumer(consumer);
+    	
+    	
     	http
         .exceptionHandling()
         //.authenticationEntryPoint(this.authenticationEntryPoint)

@@ -23,6 +23,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.boot.biz.authentication.ajax.AjaxAwareAuthenticationFailureHandler;
 import org.springframework.security.boot.biz.authentication.ajax.AjaxAwareAuthenticationSuccessHandler;
 import org.springframework.security.boot.utils.StringUtils;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.core.authority.mapping.NullAuthoritiesMapper;
 import org.springframework.security.core.userdetails.AuthenticationUserDetailsService;
@@ -181,29 +183,19 @@ public class SecurityOpenIDWebFilterConfiguration implements ApplicationContextA
 		return authenticationProvider;
 	}
 	
-	@Bean
-	@ConditionalOnMissingBean
-	public AuthenticationEntryPoint authenticationEntryPoint() {
-		
-		LoginUrlAuthenticationEntryPoint entryPoint = new LoginUrlAuthenticationEntryPoint(bizProperties.getLoginUrl());
-		entryPoint.setForceHttps(bizProperties.isForceHttps());
-		entryPoint.setUseForward(bizProperties.isUseForward());
-		
-		return entryPoint;
+	
+	@Configuration
+	@ConditionalOnMissingBean(WebSecurityConfigurerAdapter.class)
+	static class OpenIDWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
+
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			http.authorizeRequests().anyRequest().authenticated().and().openidLogin()
+					;
+		}
+
 	}
 	
-	/**
-	 * 系统登录注销过滤器；默认：org.springframework.security.web.authentication.logout.LogoutFilter
-	 */
-	@Bean
-	@ConditionalOnMissingBean
-	public LogoutFilter logoutFilter() {
-		// 登录注销后的重定向地址：直接进入登录页面
-		LogoutFilter logoutFilter = new LogoutFilter(bizProperties.getLoginUrl(), new SecurityContextLogoutHandler());
-		logoutFilter.setFilterProcessesUrl(bizProperties.getLogoutUrlPatterns());
-		return logoutFilter;
-	}
-
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.applicationContext = applicationContext;
