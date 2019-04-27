@@ -1,54 +1,30 @@
 package org.springframework.security.boot;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
+import org.springframework.security.boot.biz.property.SecurityCaptchaProperties;
+import org.springframework.security.boot.biz.property.SecurityLogoutProperties;
+import org.springframework.security.boot.biz.property.SecurityRedirectProperties;
+import org.springframework.security.boot.biz.property.SecuritySessionMgtProperties;
+import org.springframework.security.boot.openid.SecurityOpenIDAuthcProperties;
 
 @ConfigurationProperties(prefix = SecurityOpenIDProperties.PREFIX)
 public class SecurityOpenIDProperties {
 
 	public static final String PREFIX = "spring.security.openid";
-	public static final String DEFAULT_CLAIMED_IDENTITY_FIELD = "openid_identifier";
 
-	/**
-	 * Enable Security OpenID.
-	 */
+	/** Whether Enable OpenID Authentication. */
 	private boolean enabled = false;
-
-	/** The URL that determines if authentication is required */
-	private String filterProcessesUrl;
-	
-	/**
-	 * The name of the request parameter containing the OpenID identity, as
-	 * submitted from the initial login form. Defaults to "openid_identifier"
-	 */
-	private String claimedIdentityFieldName = DEFAULT_CLAIMED_IDENTITY_FIELD;
-
-	/**
-	 * Maps the <tt>return_to url</tt> to a realm, for example:
-	 *
-	 * <pre>
-	 * http://www.example.com/login/openid -&gt; http://www.example.com/realm
-	 * </pre>
-	 *
-	 * If no mapping is provided then the returnToUrl will be parsed to extract the
-	 * protocol, hostname and port followed by a trailing slash. This means that
-	 * <tt>http://www.example.com/login/openid</tt> will automatically become
-	 * <tt>http://www.example.com:80/</tt>
-	 */
-	private Map<String, String> realmMapping = Collections.emptyMap();
-
-	/**
-	 * Specifies any extra parameters submitted along with the identity field which
-	 * should be appended to the return_to URL which is assembled by
-	 * buildReturnToUrl.
-	 * <p>
-	 * If not set, it will default to the parameter name used by the
-	 * RememberMeServices obtained from the parent class (if one is set).
-	 */
-	private Set<String> returnToUrlParameters = Collections.emptySet();
+	@NestedConfigurationProperty
+	private SecurityOpenIDAuthcProperties authc = new SecurityOpenIDAuthcProperties();
+	@NestedConfigurationProperty
+	private SecurityCaptchaProperties captcha = new SecurityCaptchaProperties();
+	@NestedConfigurationProperty
+	private SecurityLogoutProperties logout = new SecurityLogoutProperties();
+	@NestedConfigurationProperty
+	private SecurityRedirectProperties redirect = new SecurityRedirectProperties();
+	@NestedConfigurationProperty
+	private SecuritySessionMgtProperties sessionMgt = new SecuritySessionMgtProperties();
 
 	public boolean isEnabled() {
 		return enabled;
@@ -57,37 +33,45 @@ public class SecurityOpenIDProperties {
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
 	}
-	
-	public String getFilterProcessesUrl() {
-		return filterProcessesUrl;
+
+	public SecurityOpenIDAuthcProperties getAuthc() {
+		return authc;
 	}
 
-	public void setFilterProcessesUrl(String filterProcessesUrl) {
-		this.filterProcessesUrl = filterProcessesUrl;
+	public void setAuthc(SecurityOpenIDAuthcProperties authc) {
+		this.authc = authc;
 	}
 
-	public String getClaimedIdentityFieldName() {
-		return claimedIdentityFieldName;
+	public SecurityCaptchaProperties getCaptcha() {
+		return captcha;
 	}
 
-	public void setClaimedIdentityFieldName(String claimedIdentityFieldName) {
-		this.claimedIdentityFieldName = claimedIdentityFieldName;
+	public void setCaptcha(SecurityCaptchaProperties captcha) {
+		this.captcha = captcha;
 	}
 
-	public Map<String, String> getRealmMapping() {
-		return realmMapping;
+	public SecurityLogoutProperties getLogout() {
+		return logout;
 	}
 
-	public void setRealmMapping(Map<String, String> realmMapping) {
-		this.realmMapping = realmMapping;
+	public void setLogout(SecurityLogoutProperties logout) {
+		this.logout = logout;
 	}
 
-	public Set<String> getReturnToUrlParameters() {
-		return returnToUrlParameters;
+	public SecurityRedirectProperties getRedirect() {
+		return redirect;
 	}
 
-	public void setReturnToUrlParameters(Set<String> returnToUrlParameters) {
-		this.returnToUrlParameters = returnToUrlParameters;
+	public void setRedirect(SecurityRedirectProperties redirect) {
+		this.redirect = redirect;
 	}
-	
+
+	public SecuritySessionMgtProperties getSessionMgt() {
+		return sessionMgt;
+	}
+
+	public void setSessionMgt(SecuritySessionMgtProperties sessionMgt) {
+		this.sessionMgt = sessionMgt;
+	}
+
 }
