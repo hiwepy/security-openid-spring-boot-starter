@@ -3,6 +3,7 @@ package org.springframework.security.boot;
 import org.openid4java.consumer.ConsumerManager;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -15,8 +16,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.boot.openid.authentication.OpenIDAuthenticationFailureHandler;
-import org.springframework.security.boot.openid.authentication.OpenIDAuthenticationSuccessHandler;
+import org.springframework.security.boot.biz.authentication.PostRequestAuthenticationFailureHandler;
+import org.springframework.security.boot.biz.authentication.PostRequestAuthenticationSuccessHandler;
 import org.springframework.security.boot.openid.userdetails.OpenIDAuthcUserDetailsService;
 import org.springframework.security.boot.utils.StringUtils;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -50,10 +51,6 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
 	private SecurityOpenIDProperties openidProperties;
 	
 	@Autowired
-	private OpenIDAuthenticationSuccessHandler successHandler;
-	@Autowired
-	private OpenIDAuthenticationFailureHandler failureHandler;
-	@Autowired
 	private OpenIDConsumer openIDConsumer;
 	@Autowired
 	private AuthenticationManager authenticationManager; 
@@ -70,9 +67,9 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
     	authcFilter.setAllowSessionCreation(openidProperties.getAuthc().isAllowSessionCreation());
     	authcFilter.setApplicationEventPublisher(eventPublisher);
     	//authcFilter.setAuthenticationDetailsSource(authenticationDetailsSource);
-    	authcFilter.setAuthenticationFailureHandler(failureHandler);
+    	//authcFilter.setAuthenticationFailureHandler(failureHandler);
     	authcFilter.setAuthenticationManager(authenticationManager);
-    	authcFilter.setAuthenticationSuccessHandler(successHandler);
+    	//authcFilter.setAuthenticationSuccessHandler(successHandler);
     	authcFilter.setClaimedIdentityFieldName(openidProperties.getAuthc().getClaimedIdentityFieldName());
     	authcFilter.setConsumer(openIDConsumer);
     	authcFilter.setContinueChainBeforeSuccessfulAuthentication(openidProperties.getAuthc().isContinueChainBeforeSuccessfulAuthentication());
@@ -110,8 +107,8 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
 		private final OpenIDAttribute attribute;
 	    private final OpenIDAuthenticationFilter openIDAuthenticationFilter;
 	    private final OpenIDAuthenticationProvider openIDAuthenticationProvider;
-	    private final OpenIDAuthenticationSuccessHandler successHandler;
-	    private final OpenIDAuthenticationFailureHandler failureHandler;
+	    private final PostRequestAuthenticationSuccessHandler authenticationSuccessHandler;
+	    private final PostRequestAuthenticationFailureHandler authenticationFailureHandler;
 		private final OpenIDAuthcUserDetailsService openIDAuthcUserDetailsService;
 		private final OpenIDConsumer consumer;
 		private final SecurityOpenIDProperties properties;
@@ -125,8 +122,8 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
 				ObjectProvider<OpenIDAuthcUserDetailsService> openIDAuthcUserDetailsService, 
 				ObjectProvider<OpenIDConsumer> consumerProvider,
 				ObjectProvider<ConsumerManager> consumerManagerProvider,
-				ObjectProvider<OpenIDAuthenticationSuccessHandler> successHandlerProvider,
-				ObjectProvider<OpenIDAuthenticationFailureHandler> failureHandlerProvider,
+				@Qualifier("jwtAuthenticationSuccessHandler") ObjectProvider<PostRequestAuthenticationSuccessHandler> authenticationSuccessHandler,
+   				@Qualifier("jwtAuthenticationFailureHandler") ObjectProvider<PostRequestAuthenticationFailureHandler> authenticationFailureHandler,
 				ObjectProvider<SessionAuthenticationStrategy> sessionAuthenticationStrategyProvider) {
 			this.attribute = attributeProvider.getIfAvailable();
 			this.properties = properties;
@@ -135,8 +132,8 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
 			this.openIDAuthcUserDetailsService = openIDAuthcUserDetailsService.getIfAvailable();
 			this.consumer = consumerProvider.getIfAvailable();
 			this.consumerManager = consumerManagerProvider.getIfAvailable();
-			this.successHandler = successHandlerProvider.getIfAvailable();
-			this.failureHandler = failureHandlerProvider.getIfAvailable();
+			this.authenticationSuccessHandler = authenticationSuccessHandler.getIfAvailable();
+   			this.authenticationFailureHandler = authenticationFailureHandler.getIfAvailable();
 			this.sessionAuthenticationStrategy = sessionAuthenticationStrategyProvider.getIfAvailable();
 		}
 
@@ -156,10 +153,10 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
 				.consumer(this.consumer)
 				.consumerManager(this.consumerManager)
 				.defaultSuccessUrl(properties.getAuthc().getSuccessUrl())
-				.failureHandler(this.failureHandler)
+				.failureHandler(this.authenticationFailureHandler)
 				.failureUrl(properties.getAuthc().getFailureUrl())
 				.loginProcessingUrl(properties.getAuthc().getLoginUrl())
-				.successHandler(this.successHandler)
+				.successHandler(this.authenticationSuccessHandler)
 				.and()
 				.sessionManagement()
 				.sessionAuthenticationStrategy(sessionAuthenticationStrategy)

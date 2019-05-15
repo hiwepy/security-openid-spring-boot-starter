@@ -15,24 +15,34 @@
  */
 package org.springframework.security.boot.openid.authentication;
 
-import java.util.List;
+import java.io.IOException;
 
-import org.springframework.security.boot.biz.authentication.AuthenticationListener;
-import org.springframework.security.boot.biz.authentication.PostRequestAuthenticationSuccessHandler;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.boot.biz.authentication.nested.MatchedAuthenticationEntryPoint;
+import org.springframework.security.core.AuthenticationException;
 
 /**
  * TODO
  * @author 		： <a href="https://github.com/vindell">vindell</a>
  */
-public class OpenIDAuthenticationSuccessHandler extends PostRequestAuthenticationSuccessHandler {
+public class OpenIDMatchedAuthenticationEntryPoint implements MatchedAuthenticationEntryPoint {
 
-	public OpenIDAuthenticationSuccessHandler(String defaultTargetUrl) {
-		super(defaultTargetUrl);
-	}
 	
-	public OpenIDAuthenticationSuccessHandler(List<AuthenticationListener> authenticationListeners,
-			String defaultTargetUrl) {
-		super(authenticationListeners, defaultTargetUrl);
+	@Override
+	public boolean supports(AuthenticationException e) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
+	@Override
+	public void commence(HttpServletRequest request, HttpServletResponse response,
+			AuthenticationException authException) throws IOException, ServletException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	 
 }
