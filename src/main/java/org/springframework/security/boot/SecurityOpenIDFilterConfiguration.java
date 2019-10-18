@@ -2,15 +2,13 @@ package org.springframework.security.boot;
 
 import org.openid4java.consumer.ConsumerManager;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ApplicationEventPublisherAware;
+import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +17,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.boot.biz.authentication.PostRequestAuthenticationFailureHandler;
 import org.springframework.security.boot.biz.authentication.PostRequestAuthenticationSuccessHandler;
 import org.springframework.security.boot.openid.userdetails.OpenIDAuthcUserDetailsService;
-import org.springframework.security.boot.utils.StringUtils;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -41,50 +38,9 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
 @ConditionalOnWebApplication
 @ConditionalOnProperty(prefix = SecurityOpenIDProperties.PREFIX, value = "enabled", havingValue = "true")
 @EnableConfigurationProperties({ SecurityOpenIDProperties.class, SecurityBizProperties.class, ServerProperties.class })
-public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublisherAware, EnvironmentAware {
+public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 
-
-	private ApplicationEventPublisher eventPublisher;
 	private Environment environment;
-	
-	@Autowired
-	private SecurityOpenIDProperties openidProperties;
-	
-	@Autowired
-	private OpenIDConsumer openIDConsumer;
-	@Autowired
-	private AuthenticationManager authenticationManager; 
-	@Autowired
-	private RememberMeServices rememberMeServices;
-	@Autowired
-	private SessionAuthenticationStrategy sessionStrategy;
-	
-    @Bean
-	public OpenIDAuthenticationFilter openIDAuthenticationFilter() throws Exception {
-    	
-    	OpenIDAuthenticationFilter authcFilter = new OpenIDAuthenticationFilter();
-    	
-    	authcFilter.setAllowSessionCreation(openidProperties.getAuthc().isAllowSessionCreation());
-    	authcFilter.setApplicationEventPublisher(eventPublisher);
-    	//authcFilter.setAuthenticationDetailsSource(authenticationDetailsSource);
-    	//authcFilter.setAuthenticationFailureHandler(failureHandler);
-    	authcFilter.setAuthenticationManager(authenticationManager);
-    	//authcFilter.setAuthenticationSuccessHandler(successHandler);
-    	authcFilter.setClaimedIdentityFieldName(openidProperties.getAuthc().getClaimedIdentityFieldName());
-    	authcFilter.setConsumer(openIDConsumer);
-    	authcFilter.setContinueChainBeforeSuccessfulAuthentication(openidProperties.getAuthc().isContinueChainBeforeSuccessfulAuthentication());
-    	authcFilter.setEnvironment(environment);
-    	if (StringUtils.hasText(openidProperties.getAuthc().getFilterProcessesUrl())) {
-    		authcFilter.setFilterProcessesUrl(openidProperties.getAuthc().getFilterProcessesUrl());
-		}
-		// authenticationFilter.setMessageSource(messageSource);
-    	authcFilter.setRealmMapping(openidProperties.getAuthc().getRealmMapping());
-    	authcFilter.setRememberMeServices(rememberMeServices);
-    	authcFilter.setReturnToUrlParameters(openidProperties.getAuthc().getReturnToUrlParameters());
-    	authcFilter.setSessionAuthenticationStrategy(sessionStrategy);
-    	
-        return authcFilter;
-    }
     
 	@Bean
 	public OpenIDAuthenticationProvider openIDAuthenticationProvider(
@@ -103,6 +59,14 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
 	@EnableConfigurationProperties({ SecurityOpenIDProperties.class, SecurityBizProperties.class })
 	static class OpenIDWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
 
+		private SecurityBizProperties bizProperties;
+		private SecurityOpenIDProperties openidProperties;
+		
+		private OpenIDConsumer openIDConsumer;
+		private AuthenticationManager authenticationManager; 
+		private RememberMeServices rememberMeServices;
+		private SessionAuthenticationStrategy sessionStrategy;
+		
 		private final ConsumerManager consumerManager;
 		private final OpenIDAttribute attribute;
 	    private final OpenIDAuthenticationFilter openIDAuthenticationFilter;
@@ -137,6 +101,33 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
 			this.sessionAuthenticationStrategy = sessionAuthenticationStrategyProvider.getIfAvailable();
 		}
 
+	    @Bean
+		public OpenIDAuthenticationFilter authenticationProcessingFilter() throws Exception {
+	    	
+	    	OpenIDAuthenticationFilter authenticationFilter = new OpenIDAuthenticationFilter();
+	    	/*
+			 * 批量设置参数
+			 */
+			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			
+			map.from(bizProperties.getSessionMgt().isAllowSessionCreation()).to(authenticationFilter::setAllowSessionCreation);
+			
+			map.from(authenticationManager).to(authenticationFilter::setAuthenticationManager);
+			map.from(authenticationSuccessHandler).to(authenticationFilter::setAuthenticationSuccessHandler);
+			map.from(authenticationFailureHandler).to(authenticationFilter::setAuthenticationFailureHandler);
+			
+			map.from(openidProperties.getAuthc().getClaimedIdentityFieldName()).to(authenticationFilter::setClaimedIdentityFieldName);
+			map.from(openidProperties.getAuthc().getRealmMapping()).to(authenticationFilter::setRealmMapping);
+			map.from(openIDConsumer).to(authenticationFilter::setConsumer);
+			map.from(openidProperties.getAuthc().getFilterProcessesUrl()).to(authenticationFilter::setFilterProcessesUrl);
+			map.from(openidProperties.getAuthc().getReturnToUrlParameters()).to(authenticationFilter::setReturnToUrlParameters);
+			map.from(rememberMeServices).to(authenticationFilter::setRememberMeServices);
+			map.from(sessionAuthenticationStrategy).to(authenticationFilter::setSessionAuthenticationStrategy);
+			map.from(openidProperties.getAuthc().isContinueChainBeforeSuccessfulAuthentication()).to(authenticationFilter::setContinueChainBeforeSuccessfulAuthentication);
+	    	
+	        return authenticationFilter;
+	    }
+
 	    @Override
 	    protected void configure(AuthenticationManagerBuilder auth) {
 	        auth.authenticationProvider(openIDAuthenticationProvider);
@@ -166,11 +157,6 @@ public class SecurityOpenIDFilterConfiguration implements ApplicationEventPublis
 			
 		}
 
-	}
-	
-	@Override
-	public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
-		this.eventPublisher = applicationEventPublisher;
 	}
 
 	@Override
