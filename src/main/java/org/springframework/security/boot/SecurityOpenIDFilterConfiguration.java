@@ -101,7 +101,6 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 			this.sessionAuthenticationStrategy = sessionAuthenticationStrategyProvider.getIfAvailable();
 		}
 
-	    @Bean
 		public OpenIDAuthenticationFilter authenticationProcessingFilter() throws Exception {
 	    	
 	    	OpenIDAuthenticationFilter authenticationFilter = new OpenIDAuthenticationFilter();
