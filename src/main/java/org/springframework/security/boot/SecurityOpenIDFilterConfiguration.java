@@ -128,12 +128,12 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 	    }
 
 	    @Override
-	    protected void configure(AuthenticationManagerBuilder auth) {
+		public void configure(AuthenticationManagerBuilder auth) {
 	        auth.authenticationProvider(openIDAuthenticationProvider);
 	    }
 		
 		@Override
-		protected void configure(HttpSecurity http) throws Exception {
+		public void configure(HttpSecurity http) throws Exception {
 			
 			http.openidLogin()
 				.attributeExchange(properties.getAuthc().getIdentifierPattern())

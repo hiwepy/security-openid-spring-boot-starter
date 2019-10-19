@@ -14,8 +14,6 @@ import org.springframework.security.boot.biz.property.SessionFixationPolicy;
 import org.springframework.security.openid.AxFetchListFactory;
 import org.springframework.security.openid.NullAxFetchListFactory;
 import org.springframework.security.openid.OpenID4JavaConsumer;
-import org.springframework.security.openid.OpenIDAuthenticationFilter;
-import org.springframework.security.openid.OpenIDAuthenticationProvider;
 import org.springframework.security.openid.OpenIDConsumer;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
