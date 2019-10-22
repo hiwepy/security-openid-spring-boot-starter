@@ -1,9 +1,11 @@
 package org.springframework.security.boot;
 
+import org.openid4java.consumer.ConsumerException;
 import org.openid4java.consumer.ConsumerManager;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
@@ -24,6 +26,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
+import org.springframework.security.openid.AxFetchListFactory;
+import org.springframework.security.openid.NullAxFetchListFactory;
+import org.springframework.security.openid.OpenID4JavaConsumer;
 import org.springframework.security.openid.OpenIDAttribute;
 import org.springframework.security.openid.OpenIDAuthenticationFilter;
 import org.springframework.security.openid.OpenIDAuthenticationProvider;
@@ -45,6 +50,25 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 	private Environment environment;
     
 	@Bean
+	@ConditionalOnMissingBean
+	public ConsumerManager consumerManager() {
+		return new ConsumerManager();
+	}
+	
+	@Bean
+	@ConditionalOnMissingBean
+	public AxFetchListFactory attributesToFetchFactory() {
+		return new  NullAxFetchListFactory();
+	}
+	
+    @Bean
+	@ConditionalOnMissingBean
+	public OpenIDConsumer openIDConsumer(ConsumerManager consumerManager,
+			AxFetchListFactory attributesToFetchFactory) throws ConsumerException {
+		return new OpenID4JavaConsumer(consumerManager, attributesToFetchFactory);
+	}
+    
+	@Bean
 	public OpenIDAuthenticationProvider openIDAuthenticationProvider(
 			OpenIDAuthcUserDetailsService openIDAuthcUserDetailsService, 
 			GrantedAuthoritiesMapper authoritiesMapper) {
@@ -63,7 +87,6 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 	static class OpenIDWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
 
 		private SecurityBizProperties bizProperties;
-		private SecurityOpenIDProperties openidProperties;
 		
 		private OpenIDConsumer openIDConsumer;
 		private AuthenticationManager authenticationManager; 
@@ -78,11 +101,12 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 	    private final PostRequestAuthenticationFailureHandler authenticationFailureHandler;
 		private final OpenIDAuthcUserDetailsService openIDAuthcUserDetailsService;
 		private final OpenIDConsumer consumer;
-		private final SecurityOpenIDProperties properties;
+		private final SecurityOpenIDAuthcProperties authcProperties;
 		private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
 	
 		public OpenIDWebSecurityConfigurerAdapter(
-				SecurityOpenIDProperties properties,
+				SecurityOpenIDAuthcProperties authcProperties,
+				
 				ObjectProvider<OpenIDAttribute> attributeProvider,
 				ObjectProvider<OpenIDAuthenticationFilter> openIDAuthenticationFilterProvider,
 				ObjectProvider<OpenIDAuthenticationProvider> openIDAuthenticationProvider,
@@ -93,7 +117,7 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
    				@Qualifier("jwtAuthenticationFailureHandler") ObjectProvider<PostRequestAuthenticationFailureHandler> authenticationFailureHandler,
 				ObjectProvider<SessionAuthenticationStrategy> sessionAuthenticationStrategyProvider) {
 			this.attribute = attributeProvider.getIfAvailable();
-			this.properties = properties;
+			this.authcProperties = authcProperties;
 			this.openIDAuthenticationFilter = openIDAuthenticationFilterProvider.getIfAvailable();
 			this.openIDAuthenticationProvider = openIDAuthenticationProvider.getIfAvailable();
 			this.openIDAuthcUserDetailsService = openIDAuthcUserDetailsService.getIfAvailable();
@@ -112,20 +136,20 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 			 */
 			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
 			
-			map.from(bizProperties.getSessionMgt().isAllowSessionCreation()).to(authenticationFilter::setAllowSessionCreation);
+			map.from(authcProperties.getSessionMgt().isAllowSessionCreation()).to(authenticationFilter::setAllowSessionCreation);
 			
 			map.from(authenticationManager).to(authenticationFilter::setAuthenticationManager);
 			map.from(authenticationSuccessHandler).to(authenticationFilter::setAuthenticationSuccessHandler);
 			map.from(authenticationFailureHandler).to(authenticationFilter::setAuthenticationFailureHandler);
 			
-			map.from(openidProperties.getAuthc().getClaimedIdentityFieldName()).to(authenticationFilter::setClaimedIdentityFieldName);
-			map.from(openidProperties.getAuthc().getRealmMapping()).to(authenticationFilter::setRealmMapping);
+			map.from(authcProperties.getClaimedIdentityFieldName()).to(authenticationFilter::setClaimedIdentityFieldName);
+			map.from(authcProperties.getRealmMapping()).to(authenticationFilter::setRealmMapping);
 			map.from(openIDConsumer).to(authenticationFilter::setConsumer);
-			map.from(openidProperties.getAuthc().getFilterProcessesUrl()).to(authenticationFilter::setFilterProcessesUrl);
-			map.from(openidProperties.getAuthc().getReturnToUrlParameters()).to(authenticationFilter::setReturnToUrlParameters);
+			map.from(authcProperties.getFilterProcessesUrl()).to(authenticationFilter::setFilterProcessesUrl);
+			map.from(authcProperties.getReturnToUrlParameters()).to(authenticationFilter::setReturnToUrlParameters);
 			map.from(rememberMeServices).to(authenticationFilter::setRememberMeServices);
 			map.from(sessionAuthenticationStrategy).to(authenticationFilter::setSessionAuthenticationStrategy);
-			map.from(openidProperties.getAuthc().isContinueChainBeforeSuccessfulAuthentication()).to(authenticationFilter::setContinueChainBeforeSuccessfulAuthentication);
+			map.from(authcProperties.isContinueChainBeforeSuccessfulAuthentication()).to(authenticationFilter::setContinueChainBeforeSuccessfulAuthentication);
 	    	
 	        return authenticationFilter;
 	    }
@@ -139,16 +163,16 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 		public void configure(HttpSecurity http) throws Exception {
 			
 			http.openidLogin()
-				.attributeExchange(properties.getAuthc().getIdentifierPattern())
+				.attributeExchange(authcProperties.getIdentifierPattern())
 				.attribute(attribute)
 				.and()
 				.authenticationUserDetailsService(this.openIDAuthcUserDetailsService)
 				.consumer(this.consumer)
 				.consumerManager(this.consumerManager)
-				.defaultSuccessUrl(properties.getAuthc().getSuccessUrl())
+				.defaultSuccessUrl(authcProperties.getSuccessUrl())
 				.failureHandler(this.authenticationFailureHandler)
-				.failureUrl(properties.getAuthc().getFailureUrl())
-				.loginProcessingUrl(properties.getAuthc().getLoginUrl())
+				.failureUrl(authcProperties.getFailureUrl())
+				.loginProcessingUrl(authcProperties.getLoginUrl())
 				.successHandler(this.authenticationSuccessHandler)
 				.and()
 				.sessionManagement()
