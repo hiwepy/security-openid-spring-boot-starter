@@ -10,7 +10,7 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	
-	<artifactId>spring-boot-starter-security-openid</artifactId>
+	<artifactId>security-openid-spring-boot-starter</artifactId>
 	<description>Spring Boot Starter For Spring Security With OpenID</description>
 	<version>1.0.0-SNAPSHOT</version>
 	<name>${project.groupId}:${project.artifactId}</name>
