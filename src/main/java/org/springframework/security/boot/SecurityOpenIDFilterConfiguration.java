@@ -20,6 +20,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.boot.biz.authentication.PostRequestAuthenticationFailureHandler;
 import org.springframework.security.boot.biz.authentication.PostRequestAuthenticationSuccessHandler;
+import org.springframework.security.boot.biz.property.SecuritySessionMgtProperties;
 import org.springframework.security.boot.openid.userdetails.OpenIDAuthcUserDetailsService;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -105,6 +106,8 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 		private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
 	
 		public OpenIDWebSecurityConfigurerAdapter(
+
+				SecuritySessionMgtProperties sessionMgtProperties,
 				SecurityOpenIDAuthcProperties authcProperties,
 				
 				ObjectProvider<OpenIDAttribute> attributeProvider,
