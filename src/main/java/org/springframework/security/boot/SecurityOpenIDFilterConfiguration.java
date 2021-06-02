@@ -15,11 +15,9 @@ import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.PropertyMapper;
-import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.boot.biz.authentication.AuthenticationListener;
@@ -28,6 +26,7 @@ import org.springframework.security.boot.biz.authentication.nested.MatchedAuthen
 import org.springframework.security.boot.biz.authentication.nested.MatchedAuthenticationSuccessHandler;
 import org.springframework.security.boot.biz.property.SecuritySessionMgtProperties;
 import org.springframework.security.boot.openid.userdetails.OpenIDAuthcUserDetailsService;
+import org.springframework.security.boot.utils.WebSecurityUtils;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
@@ -44,7 +43,6 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
-import org.springframework.security.web.savedrequest.RequestCache;
 
 @Configuration
 @AutoConfigureBefore(name = { 
@@ -54,9 +52,7 @@ import org.springframework.security.web.savedrequest.RequestCache;
 @ConditionalOnWebApplication
 @ConditionalOnProperty(prefix = SecurityOpenIDProperties.PREFIX, value = "enabled", havingValue = "true")
 @EnableConfigurationProperties({ SecurityOpenIDProperties.class, SecurityBizProperties.class, ServerProperties.class })
-public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
-
-	private Environment environment;
+public class SecurityOpenIDFilterConfiguration {
     
 	@Bean
 	@ConditionalOnMissingBean
@@ -95,30 +91,23 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 	@Order(SecurityProperties.DEFAULT_FILTER_ORDER + 7)
 	static class OpenIDWebSecurityConfigurerAdapter extends WebSecurityBizConfigurerAdapter {
 
-		private SecurityBizProperties bizProperties;
-
 		private final SecurityOpenIDAuthcProperties authcProperties;
 		
-		private OpenIDConsumer openIDConsumer;
-		private AuthenticationManager authenticationManager; 
-
-
+		private final LocaleContextFilter localeContextFilter;
 	    private final AuthenticationEntryPoint authenticationEntryPoint;
 	    private final AuthenticationSuccessHandler authenticationSuccessHandler;
 	    private final AuthenticationFailureHandler authenticationFailureHandler;
-	    
-    	private final LocaleContextFilter localeContextFilter;
-    	
+    	private final RememberMeServices rememberMeServices;
+		private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
+		
+		
+		private OpenIDConsumer openIDConsumer;
 		private final ConsumerManager consumerManager;
 		private final OpenIDAttribute attribute;
 	    private final OpenIDAuthenticationFilter openIDAuthenticationFilter;
 	    private final OpenIDAuthenticationProvider openIDAuthenticationProvider;
 		private final OpenIDAuthcUserDetailsService openIDAuthcUserDetailsService;
 		private final OpenIDConsumer consumer;
-		
-    	private final RequestCache requestCache;
-    	private final RememberMeServices rememberMeServices;
-		private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
 	
 		public OpenIDWebSecurityConfigurerAdapter(
 
@@ -126,41 +115,39 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 				SecuritySessionMgtProperties sessionMgtProperties,
 				SecurityOpenIDAuthcProperties authcProperties,
 
-   				ObjectProvider<LocaleContextFilter> localeContextProvider,
-   				ObjectProvider<AuthenticationProvider> authenticationProvider,
-   				ObjectProvider<AuthenticationManager> authenticationManagerProvider,
-   				ObjectProvider<AuthenticationListener> authenticationListenerProvider,
-   				ObjectProvider<MatchedAuthenticationEntryPoint> authenticationEntryPointProvider,
-   				ObjectProvider<MatchedAuthenticationSuccessHandler> authenticationSuccessHandlerProvider,
-   				ObjectProvider<MatchedAuthenticationFailureHandler> authenticationFailureHandlerProvider, 
-   				
 				ObjectProvider<OpenIDAttribute> attributeProvider,
 				ObjectProvider<OpenIDAuthenticationFilter> openIDAuthenticationFilterProvider,
 				ObjectProvider<OpenIDAuthenticationProvider> openIDAuthenticationProvider,
 				ObjectProvider<OpenIDAuthcUserDetailsService> openIDAuthcUserDetailsService, 
 				ObjectProvider<OpenIDConsumer> consumerProvider,
 				ObjectProvider<ConsumerManager> consumerManagerProvider,
+				
+   				ObjectProvider<LocaleContextFilter> localeContextProvider,
+   				ObjectProvider<AuthenticationProvider> authenticationProvider,
+   				ObjectProvider<AuthenticationListener> authenticationListenerProvider,
+   				ObjectProvider<MatchedAuthenticationEntryPoint> authenticationEntryPointProvider,
+   				ObjectProvider<MatchedAuthenticationSuccessHandler> authenticationSuccessHandlerProvider,
+   				ObjectProvider<MatchedAuthenticationFailureHandler> authenticationFailureHandlerProvider, 
 				ObjectProvider<RememberMeServices> rememberMeServicesProvider,
 				ObjectProvider<SessionAuthenticationStrategy> sessionAuthenticationStrategyProvider) {
 			
-			super(bizProperties, authcProperties, sessionMgtProperties, authenticationProvider.stream().collect(Collectors.toList()),
-					authenticationManagerProvider.getIfAvailable());
+			super(bizProperties, sessionMgtProperties, authenticationProvider.stream().collect(Collectors.toList()));
 			
 			this.localeContextFilter = localeContextProvider.getIfAvailable();
    			List<AuthenticationListener> authenticationListeners = authenticationListenerProvider.stream().collect(Collectors.toList());
-   			this.authenticationEntryPoint = super.authenticationEntryPoint(authenticationEntryPointProvider.stream().collect(Collectors.toList()));
-   			this.authenticationSuccessHandler = super.authenticationSuccessHandler(authenticationListeners, authenticationSuccessHandlerProvider.stream().collect(Collectors.toList()));
-   			this.authenticationFailureHandler = super.authenticationFailureHandler(authenticationListeners, authenticationFailureHandlerProvider.stream().collect(Collectors.toList()));
-   			this.requestCache = super.requestCache();
+   			this.authenticationEntryPoint = WebSecurityUtils.authenticationEntryPoint(authcProperties, sessionMgtProperties, authenticationEntryPointProvider.stream().collect(Collectors.toList()));
+   			this.authenticationSuccessHandler = WebSecurityUtils.authenticationSuccessHandler(authcProperties, sessionMgtProperties, authenticationListeners, authenticationSuccessHandlerProvider.stream().collect(Collectors.toList()));
+   			this.authenticationFailureHandler = WebSecurityUtils.authenticationFailureHandler(authcProperties, sessionMgtProperties, authenticationListeners, authenticationFailureHandlerProvider.stream().collect(Collectors.toList()));
    			this.rememberMeServices = rememberMeServicesProvider.getIfAvailable();
-			this.attribute = attributeProvider.getIfAvailable();
+   			this.sessionAuthenticationStrategy = sessionAuthenticationStrategyProvider.getIfAvailable();
+			
+   			this.attribute = attributeProvider.getIfAvailable();
 			this.authcProperties = authcProperties;
 			this.openIDAuthenticationFilter = openIDAuthenticationFilterProvider.getIfAvailable();
 			this.openIDAuthenticationProvider = openIDAuthenticationProvider.getIfAvailable();
 			this.openIDAuthcUserDetailsService = openIDAuthcUserDetailsService.getIfAvailable();
 			this.consumer = consumerProvider.getIfAvailable();
 			this.consumerManager = consumerManagerProvider.getIfAvailable();
-			this.sessionAuthenticationStrategy = sessionAuthenticationStrategyProvider.getIfAvailable();
 		}
 
 		public OpenIDAuthenticationFilter authenticationProcessingFilter() throws Exception {
@@ -173,7 +160,7 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 			
 			map.from(getSessionMgtProperties().isAllowSessionCreation()).to(authenticationFilter::setAllowSessionCreation);
 			
-			map.from(authenticationManager).to(authenticationFilter::setAuthenticationManager);
+			map.from(authenticationManagerBean()).to(authenticationFilter::setAuthenticationManager);
 			map.from(authenticationSuccessHandler).to(authenticationFilter::setAuthenticationSuccessHandler);
 			map.from(authenticationFailureHandler).to(authenticationFilter::setAuthenticationFailureHandler);
 			
@@ -197,10 +184,8 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 		@Override
 		public void configure(HttpSecurity http) throws Exception {
 			
-			http.requestCache()
-	        	.requestCache(requestCache)
-	        	.and()
-	        	.exceptionHandling()
+			http.antMatcher(authcProperties.getPathPattern())
+				.exceptionHandling()
 	        	.authenticationEntryPoint(authenticationEntryPoint)
 	        	.and()
 	        	.httpBasic()
@@ -224,11 +209,6 @@ public class SecurityOpenIDFilterConfiguration implements EnvironmentAware {
 			
 		}
 
-	}
-
-	@Override
-	public void setEnvironment(Environment environment) {
-		this.environment = environment;
 	}
 	
 }
